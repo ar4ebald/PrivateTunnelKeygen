@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26206.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PrivateTunnelKeygen", "PrivateTunnelKeygen\PrivateTunnelKeygen.csproj", "{801DBE98-B2B2-418B-9F2B-A8814AA677FD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Debug|x64.ActiveCfg = Debug|x64
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Debug|x64.Build.0 = Debug|x64
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Debug|x86.ActiveCfg = Debug|x86
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Debug|x86.Build.0 = Debug|x86
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Release|x64.ActiveCfg = Release|x64
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Release|x64.Build.0 = Release|x64
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Release|x86.ActiveCfg = Release|x86
+		{801DBE98-B2B2-418B-9F2B-A8814AA677FD}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

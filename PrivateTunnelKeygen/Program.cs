@@ -1,75 +1,69 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using static PrivateTunnelKeygen.ConsoleHelper;
 
 namespace PrivateTunnelKeygen
 {
-    class Program
+    static class Program
     {
-        private const int UsersCacheSize = 5;
+        private const int UsersCacheSize = 1;
+        private const int SignUpAttempts = 6;
+        private const int TrafficUpdatePeriod = 15 * 1000;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Run().Wait();
-        }
+            Credentials user;
+            CookieContainer cookies;
 
-        static async Task<TempMail.Credentials> SignUp()
-        {
-            var source = new CancellationTokenSource();
-            var user = await TempMail.CreateRandomUser(source.Token);
-            var cookies = await Api.SignUp(user, source.Token);
-            return user;
-        }
-
-        static async Task Run()
-        {
-            TempMail.Credentials user;
-
-            var cacheFolder = FileManager.GetUsersCacheFolderPath();
-            var cachedUsers = cacheFolder.GetFiles().ToList();
-
-            if (cachedUsers.Count == 0)
-                user = await SignUp();
-            else
-            {
-                var oldestFile = cachedUsers.OrderBy(i => i.CreationTime).First();
-
-                user = JToken.Parse(File.ReadAllText(oldestFile.FullName)).ToObject<TempMail.Credentials>();
-
-                cachedUsers.Remove(oldestFile);
-                oldestFile.Delete();
-            }
+            if (!Cache.TryGetCredentials(out user, out cookies, out int usersInCache))
+                (user, cookies) = await SignUp();
 
             FileManager.InjectCredentials(user);
             ProcessManager.RestartClient();
 
-            var workAmmount = UsersCacheSize - cachedUsers.Count;
+            Task.WaitAll(
+                Enumerable.Range(0, UsersCacheSize - usersInCache)
+                    .Select(i => SignUp())
+                    .ToArray()
+            );
 
-            Parallel.For(0, workAmmount, i =>
+            while (!ExitRequested())
             {
-                for (int attempt = 0; attempt < 5; attempt++)
+                var (left, total) = await PrivateTunnel.GetTraffic(user.Email, cookies);
+                WriteLine($"Left: %Green{left}%, Total: %Green{total}%");
+                await Task.Delay(TrafficUpdatePeriod);
+                
+            }
+
+            bool ExitRequested()
+            {
+                while (Console.KeyAvailable)
+                    if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                        return true;
+
+                return false;
+            }
+        }
+
+        static async Task<(Credentials credentials, CookieContainer cookies)> SignUp()
+        {
+            for (int i = 0; i < SignUpAttempts; i++)
+            {
+                try
                 {
-                    try
-                    {
-                        var newUser = SignUp().Result;
-                        var path = Path.Combine(cacheFolder.FullName, Guid.NewGuid().ToString("N"));
-                        File.WriteAllText(path, JToken.FromObject(newUser).ToString());
+                    var user = await TempMail.CreateRandomUser();
+                    var cookies = await PrivateTunnel.SignUp(user);
 
-                        lock (cachedUsers)
-                            cachedUsers.Add(new FileInfo(path));
+                    Cache.SaveCredentials(user, cookies);
 
-                        ConsoleHelper.WriteLine($"Cached {cachedUsers.Count} users out of {UsersCacheSize}");
-                        return;
-                    }
-                    catch (HttpRequestException) { }
+                    return (user, cookies);
                 }
-            });
+                catch (Exception) { }
+            }
+
+            return (null, null);
         }
     }
 }

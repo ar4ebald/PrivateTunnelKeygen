@@ -1,28 +1,50 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace PrivateTunnelKeygen
 {
     static class ConsoleHelper
     {
-        public const ConsoleColor DefaultColor = ConsoleColor.Gray;
+        private static readonly string[] ColorsNames = Enum.GetNames(typeof(ConsoleColor));
 
-        public static void WriteLine(string message, ConsoleColor color = DefaultColor)
+        private static readonly object SyncRoot = new object();
+
+        public static void WriteLine(string message)
         {
-            Write(message + Environment.NewLine, color);
-        }
+            var colorsStack = new Stack<ConsoleColor>();
 
-        public static void Write(string message, ConsoleColor color = DefaultColor)
-        {
-            var oldColor = Console.ForegroundColor;
-            bool changeColor = color != oldColor;
+            lock (SyncRoot)
+            {
+                for (int i = 0; i < message.Length; ++i)
+                {
+                    if (message[i] == '%')
+                    {
+                        string colorName =
+                            ColorsNames.FirstOrDefault(
+                                name => string.Compare(
+                                            message, i + 1,
+                                            name, 0,
+                                            name.Length,
+                                            StringComparison.OrdinalIgnoreCase) == 0);
 
-            if (changeColor)
-                Console.ForegroundColor = color;
+                        if (colorName == null)
+                            Console.ForegroundColor = colorsStack.Pop();
+                        else
+                        {
+                            i += colorName.Length;
+                            colorsStack.Push(Console.ForegroundColor);
+                            Console.ForegroundColor = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), colorName);
+                        }
+                    }
+                    else
+                    {
+                        Console.Write(message[i]);
+                    }
+                }
 
-            Console.Write(message);
-
-            if (changeColor)
-                Console.ForegroundColor = oldColor;
+                Console.WriteLine();
+            }
         }
     }
 }

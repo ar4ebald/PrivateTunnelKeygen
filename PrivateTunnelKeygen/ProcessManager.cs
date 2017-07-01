@@ -26,16 +26,18 @@ namespace PrivateTunnelKeygen
 
         public static void RestartClient()
         {
-            string executablePath = FileManager.GetExecutablePath();
+            string pePath = FileManager.ExecutablePath;
 
             WriteLine("Killing running instances...");
-            foreach (Process process in GetProcessByPath(executablePath))
+            foreach (Process process in GetProcessByPath(pePath))
                 process.Kill();
 
             WriteLine("Starting new instance...");
-            Process.Start(new ProcessStartInfo(executablePath)
+            Process.Start(new ProcessStartInfo(pePath)
             {
-                WorkingDirectory = Directory.GetDirectoryRoot(executablePath)
+                WorkingDirectory = Directory.GetDirectoryRoot(pePath),
+                UseShellExecute = false,
+                CreateNoWindow = true
             });
         }
     }

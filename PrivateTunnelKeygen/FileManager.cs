@@ -10,105 +10,104 @@ namespace PrivateTunnelKeygen
 {
     static class FileManager
     {
-        private static string GetConfigPath()
+        private static string ConfigurationFilePath
         {
-            string path;
+            get
+            {
+                string path;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                path = @"%localappdata%\PrivateTunnel\ptcore.cfg";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                path = @"~/Library/Application Support/PrivateTunnel/ptcore.cfg";
-            else
-                throw new NotSupportedException("PrivateTunnel is unavailable for linux yet");
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    path = @"%localappdata%\PrivateTunnel\ptcore.cfg";
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    path = @"%HOME%/Library/Application Support/PrivateTunnel/ptcore.cfg";
+                else
+                    throw new NotSupportedException("PrivateTunnel is unavailable for linux yet");
 
-            path = Environment.ExpandEnvironmentVariables(path);
+                path = Environment.ExpandEnvironmentVariables(path);
 
-            if (File.Exists(path))
-                return path;
+                if (File.Exists(path))
+                    return path;
 
-            throw new FileNotFoundException("Unable to find PrivateTunnel configuration file.");
+                throw new FileNotFoundException("Unable to find PrivateTunnel configuration file.");
+            }
         }
 
-        public static string GetExecutablePath()
+        public static string ExecutablePath
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            get
             {
-                string[] prefixes = { "%ProgramFiles%", "%ProgramFiles(x86)%" };
-                foreach (var prefix in prefixes.Select(Environment.ExpandEnvironmentVariables))
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    string folder = $@"{prefix}\OpenVPN Technologies\PrivateTunnel";
-                    if (Directory.Exists(folder))
+                    string[] roots = {"%ProgramFiles%", "%ProgramFiles(x86)%"};
+                    foreach (var root in roots.Select(Environment.ExpandEnvironmentVariables))
                     {
-                        string path = Directory.GetFiles(folder, "PrivateTunnel*.exe").FirstOrDefault();
-                        if (path != null)
-                            return path;
+                        string installDir = $@"{root}\OpenVPN Technologies\PrivateTunnel";
+                        if (Directory.Exists(installDir))
+                        {
+                            string peFile = Directory.GetFiles(installDir, "PrivateTunnel*.exe").FirstOrDefault();
+                            if (peFile != null)
+                                return peFile;
+                        }
                     }
                 }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    return "/Applications/PrivateTunnel.app";
+                else
+                    throw new NotSupportedException("PrivateTunnel is unavailable for linux yet");
+
+                throw new FileNotFoundException("Unable to find PrivateTunnel executable file.");
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return "/Applications/PrivateTunnel.app";
-            else
-                throw new NotSupportedException("PrivateTunnel is unavailable for linux yet");
-
-            throw new FileNotFoundException("Unable to find PrivateTunnel executable file.");
         }
 
-        public static DirectoryInfo GetUsersCacheFolderPath()
+        public static DirectoryInfo UsersCacheDir
         {
-            string path;
+            get
+            {
+                string path;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                path = @"%appdata%\PrivateTunnelKeygen\UsersCache";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                path = @"~/Library/Application Support/PrivateTunnel/UsersCache";
-            else
-                throw new NotSupportedException("PrivateTunnel is unavailable for linux yet");
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    path = @"%appdata%\PrivateTunnelKeygen\UsersCache";
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    path = @"%HOME%/Library/Application Support/PrivateTunnel/UsersCache";
+                else
+                    throw new NotSupportedException("PrivateTunnel is unavailable for linux yet");
 
-            return Directory.CreateDirectory(Environment.ExpandEnvironmentVariables(path));
+                return Directory.CreateDirectory(Environment.ExpandEnvironmentVariables(path));
+            }
         }
 
-        public static void InjectCredentials(TempMail.Credentials credentials)
+        public static void InjectCredentials(Credentials credentials)
         {
-            const string emailKey = "[username]";
-            const string passwordKey = "[password]";
-
             WriteLine("Injecting credentials...");
 
-            string configPath = GetConfigPath();
+            List<string> lines = File.ReadAllLines(ConfigurationFilePath).ToList();
 
-            List<string> lines = File.ReadAllLines(configPath).ToList();
-
-            int i = 0;
-            while (i < lines.Count)
+            var replaces = new Dictionary<string, string>()
             {
-                switch (lines[i])
+                ["[username]"] = credentials.Email,
+                ["[password]"] = credentials.PasswordHash,
+                ["[auto-connect]"] = "status=enable",
+                ["[vpn-permit]"] = "true"
+            };
+
+            for (int i = 0; i < lines.Count; )
+            {
+                if (lines[i] == "[token]")
                 {
-                    case emailKey:
-                    case passwordKey:
-                    case "[token]":
-                        lines.RemoveRange(i, 2);
-                        break;
-                    case "[auto-connect]":
-                        lines[i + 1] = "status=enable";
-                        i += 2;
-                        break;
-                    case "[vpn-permit]":
-                        lines[i + 1] = "true";
-                        i += 2;
-                        break;
-                    default:
-                        i++;
-                        break;
+                    lines.RemoveRange(i, 2);
+                }
+                else if (replaces.TryGetValue(lines[i], out string replace))
+                {
+                    lines[i + 1] = replace;
+                    i += 2;
+                }
+                else
+                {
+                    i += 1;
                 }
             }
 
-            lines.InsertRange(0, new[]
-            {
-                emailKey, credentials.Email,
-                passwordKey, credentials.PasswordHash,
-            });
-
-            File.WriteAllLines(configPath, lines);
+            File.WriteAllLines(ConfigurationFilePath, lines);
         }
     }
 }
